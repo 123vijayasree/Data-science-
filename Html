@@ -1,0 +1,219 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no" />
+<title>Zillow Zestimate Simple App</title>
+<style>
+  /* Reset and base */
+  * {
+    box-sizing: border-box;
+  }
+
+  body {
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    background: linear-gradient(135deg, #4b79a1, #283e51);
+    margin: 0;
+    padding: 0;
+    color: #fff;
+    max-width: 350px;
+    min-height: 600px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 15px;
+  }
+
+  h1 {
+    margin-top: 10px;
+    margin-bottom: 20px;
+    font-weight: 700;
+    font-size: 1.8rem;
+    text-align: center;
+    letter-spacing: 1.5px;
+    text-shadow: 0 0 4px rgba(255,255,255,0.4);
+  }
+
+  form {
+    background: rgba(255,255,255,0.1);
+    border-radius: 15px;
+    padding: 20px;
+    width: 100%;
+    box-shadow: 0 6px 15px rgba(0, 0, 0, 0.4);
+  }
+
+  label {
+    display: block;
+    margin-bottom: 6px;
+    font-weight: 600;
+    font-size: 0.9rem;
+  }
+
+  input[type="number"],
+  select {
+    width: 100%;
+    padding: 10px 12px;
+    margin-bottom: 18px;
+    border-radius: 8px;
+    border: none;
+    font-size: 1rem;
+    font-weight: 600;
+    outline: none;
+    transition: box-shadow 0.3s ease;
+  }
+
+  input[type="number"]:focus,
+  select:focus {
+    box-shadow: 0 0 8px #89c2d9;
+  }
+
+  button {
+    width: 100%;
+    padding: 12px;
+    background: #ff5f6d;
+    background: linear-gradient(45deg, #ff5f6d, #ffc371);
+    border: none;
+    border-radius: 10px;
+    font-weight: 700;
+    font-size: 1.1rem;
+    color: #282828;
+    cursor: pointer;
+    box-shadow: 0 5px 10px rgba(255, 95, 109, 0.7);
+    transition: background 0.3s ease;
+  }
+
+  button:hover {
+    background: linear-gradient(45deg, #ffc371, #ff5f6d);
+  }
+
+  .output {
+    margin-top: 25px;
+    background: rgba(255,255,255,0.15);
+    border-radius: 15px;
+    padding: 20px;
+    text-align: center;
+    font-size: 1.4rem;
+    font-weight: 700;
+    box-shadow: 0 6px 15px rgba(0, 0, 0, 0.3);
+    user-select: none;
+  }
+
+  /* Footer */
+  footer {
+    margin-top: auto;
+    font-size: 0.8rem;
+    color: #bbb;
+    text-align: center;
+    padding: 8px 0;
+    user-select: none;
+  }
+
+  @media (max-height: 600px) {
+    body {
+      min-height: 100vh;
+      padding-bottom: 40px; /* footer spacing */
+    }
+  }
+
+</style>
+</head>
+<body>
+  <h1>Zillow Zestimate Lite</h1>
+  <form id="zestimate-form">
+    <label for="location">Location</label>
+    <select id="location" name="location" required>
+      <option value="" disabled selected>Select a location</option>
+      <option value="1.2">San Francisco - High Demand (+20%)</option>
+      <option value="1.0">Austin - Medium Demand</option>
+      <option value="0.8">Detroit - Lower Demand (-20%)</option>
+      <option value="1.1">Seattle - Above Avg Demand (+10%)</option>
+      <option value="0.9">Cleveland - Slightly Lower Demand (-10%)</option>
+    </select>
+
+    <label for="sqft">Square Footage (sq.ft.)</label>
+    <input type="number" id="sqft" name="sqft" min="200" max="10000" step="10" placeholder="e.g. 1500" required />
+
+    <label for="bedrooms">Number of Bedrooms</label>
+    <input type="number" id="bedrooms" name="bedrooms" min="1" max="10" step="1" value="3" required />
+
+    <label for="bathrooms">Number of Bathrooms</label>
+    <input type="number" id="bathrooms" name="bathrooms" min="1" max="10" step="0.5" value="2" required />
+
+    <label for="age">House Age (years)</label>
+    <input type="number" id="age" name="age" min="0" max="200" step="1" value="10" required />
+
+    <button type="submit">Estimate Price</button>
+  </form>
+
+  <div class="output" id="estimate-output" aria-live="polite" aria-atomic="true" style="display:none;"></div>
+
+  <footer>
+    &copy; 2024 Zillow Zestimate Lite Demo
+  </footer>
+
+<script>
+  // Simple heuristic model coefficients (fictional for demo)
+  // Base price per sqft in USD
+  const basePricePerSqft = 200;
+
+  // Bedroom adjustment per bedroom
+  const bedroomValue = 15000;
+
+  // Bathroom adjustment per bathroom
+  const bathroomValue = 10000;
+
+  // Age penalty per year older than 10 years (after 10 years, reduce price)
+  const maxAgeBeforePenalty = 10;
+  const agePenaltyPerYear = 1000;
+
+  const form = document.getElementById("zestimate-form");
+  const output = document.getElementById("estimate-output");
+
+  form.addEventListener("submit", function(event) {
+    event.preventDefault();
+
+    const locationMultiplier = parseFloat(form.location.value);
+    const sqft = parseInt(form.sqft.value);
+    const bedrooms = parseInt(form.bedrooms.value);
+    const bathrooms = parseFloat(form.bathrooms.value);
+    const age = parseInt(form.age.value);
+
+    if (isNaN(locationMultiplier) || isNaN(sqft) || isNaN(bedrooms) || isNaN(bathrooms) || isNaN(age)) {
+      output.style.display = "block";
+      output.textContent = "Please fill all fields correctly.";
+      return;
+    }
+
+    // Calculate price base
+    let price = basePricePerSqft * sqft;
+
+    // Add bedroom value
+    price += bedrooms * bedroomValue;
+
+    // Add bathroom value
+    price += bathrooms * bathroomValue;
+
+    // Age penalty if house older than 10 years
+    if (age > maxAgeBeforePenalty) {
+      price -= (age - maxAgeBeforePenalty) * agePenaltyPerYear;
+    }
+
+    // Apply location multiplier
+    price *= locationMultiplier;
+
+    // Floor price at zero 
+    if (price < 10000) price = 10000;
+
+    // Format as USD currency
+    const formatter = new Intl.NumberFormat('en-US', {
+      style: 'currency',
+      currency: 'USD',
+      maximumFractionDigits: 0
+    });
+
+    output.style.display = "block";
+    output.textContent = `Estimated Zestimate: ${formatter.format(price)}`;
+  });
+</script>
+</body>
+</html>
