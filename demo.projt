@@ -1,0 +1,31 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>House Price Forecasting with TensorFlow.js</title>
+  <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs"></script>
+</head>
+<body>
+  <h1>House Price Forecasting</h1>
+
+  <script>
+    async function runHousePriceForecasting() {
+      // Sample data: [sqft, bedrooms, bathrooms], price
+      const X = tf.tensor2d([
+        [1000, 3, 2],
+        [1500, 3, 2],
+        [2000, 4, 3],
+        [2500, 4, 3],
+        [3000, 5, 4],
+        [3500, 5, 4],
+        [4000, 6, 5]
+      ]);
+
+      const y = tf.tensor2d([300000, 350000, 400000, 450000, 500000, 550000, 600000], [7, 1]);
+
+      // Create a simple sequential model
+      const model = tf.sequential();
+      model.add(tf.layers.dense({ units: 1, inputShape: [3] }));
+
+      model.compile
